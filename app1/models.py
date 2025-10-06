@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
 from django.urls import reverse
+from django.utils.text import slugify
 # Create your models here.
 
 class MyAccountManager(BaseUserManager):
@@ -70,12 +71,17 @@ class Category(models.Model):
     category_name=models.CharField(max_length=100,unique=True)
     slug=models.SlugField(max_length=255,blank=True,unique=True)
     description=models.TextField(max_length=255,blank=True)
-    category_image=models.ImageField(upload_to='media/photos/categories')
+    category_image=models.ImageField(upload_to='photos/categories')
 
 
     class Meta:
         verbose_name='category'
         verbose_name_plural='categories'
+
+    def save(self,*args,**kwargs):
+        if not self.slug:
+            self.slug =slugify(self.category_name)
+        super().save(*args,**kwargs)
 
     def get_url(self):
         return reverse('product_by_category',args=[self.slug])
@@ -96,9 +102,56 @@ class Product(models.Model):
     created_date    =models.DateTimeField(auto_now_add=True)
     modified_date   =models.DateTimeField(auto_now=True)
 
+    
 
     def get_url(self):
         return reverse('product_detail',args=[self.category.slug,self.slug])
 
     def __str__(self):
         return self.product_name
+    
+class VariationManager(models.Manager):
+    def colors(self):
+        return super(VariationManager,self).filter(variation_category='color',is_active=True)
+    def sizes(self):
+        return super(VariationManager,self).filter(variation_category='size',is_active=True)
+
+variation_category =(
+    ('color','color'),
+    ('size','size'),
+)
+
+
+class Variation(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    variation_category = models.CharField(max_length=100, choices=variation_category)
+    variation_values = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    created_at =models.DateTimeField(auto_now=True)
+
+    objects = VariationManager()
+    def __str__(self):
+        return self.variation_values
+    
+    
+    
+class Cart(models.Model):
+    cart_id=models.CharField(max_length=200,blank=True)
+    date_added=models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return self.cart_id
+    
+class CartItem(models.Model):
+    product   = models.ForeignKey(Product,on_delete=models.CASCADE)
+    variations = models.ManyToManyField(Variation,blank=True)
+    cart      = models.ForeignKey(Cart,on_delete=models.CASCADE)
+    quantity  = models.IntegerField()
+    is_active = models.BooleanField(default=True)
+
+    def sub_total(self):
+        return self.product.price*self.quantity
+
+    def __str__(self):
+        return self.product.product_name
+

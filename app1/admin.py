@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Category,Account,Product
+from .models import Category,Account,Product, Cart, CartItem, Variation
 # Register your models here.
 
 class AccountAdmin(UserAdmin):
@@ -14,7 +14,7 @@ class AccountAdmin(UserAdmin):
     fieldsets=()
 
 class CategoryAdmin(admin.ModelAdmin):
-    prepopulated_fields={'slug':('category_name',)}
+    # prepopulated_fields={'slug':('category_name',)}
     list_display=('category_name','slug',)
 
 
@@ -22,6 +22,20 @@ class ProductAdmin(admin.ModelAdmin):
     prepopulated_fields={'slug':('product_name',)}
     list_display=('product_name','price','stock','category','modified_date','is_available')
 
-admin.site.register(Category,CategoryAdmin)
+class VariationAdmin(admin.ModelAdmin):
+    list_display=('product','variation_category','variation_values','is_active')
+    list_editable =('is_active',)
+    list_filter = ('product','variation_category','variation_values')
+
+class CartAdmin(admin.ModelAdmin):
+    list_display = ('cart_id','date_added')
+
+class CartItemAdmin(admin.ModelAdmin):
+    list_display =('product','cart','quantity','is_active')
+
+admin.site.register(Category)
 admin.site.register(Account,AccountAdmin)
 admin.site.register(Product,ProductAdmin)
+admin.site.register(Cart, CartAdmin)
+admin.site.register(CartItem,CartItemAdmin)
+admin.site.register(Variation,VariationAdmin)
